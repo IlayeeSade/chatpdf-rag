@@ -19,8 +19,9 @@ logger = logging.getLogger(__name__)
 
 class ChatPDF:
     """A class for handling PDF ingestion and question answering using RAG."""
-
-    def __init__(self, llm_model: str = "deepseek-r1:latest", embedding_model: str = "mxbai-embed-large"):
+    
+    def __init__(self, llm_model: str = "hf.co/mradermacher/dictalm2.0-instruct-GGUF:Q6_K",
+                 embedding_model: str = "hf.co/KimChen/bge-m3-GGUF:Q6_K"):
         """
         Initialize the ChatPDF instance with an LLM and embedding model.
         """
@@ -29,14 +30,14 @@ class ChatPDF:
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
         self.prompt = ChatPromptTemplate.from_template(
             """
-            You are a helpful assistant answering questions based on the uploaded document.
+            You are a helpful assistant answering questions based on the uploaded documents you have in your context.
             Context:
             {context}
             
             Question:
             {question}
             
-            Answer concisely and accurately in three sentences or less.
+            Answer accurately, comprehensively and relvantly.
             """
         )
         self.vector_store = None
@@ -84,7 +85,7 @@ class ChatPDF:
 
         # Build the RAG chain
         chain = (
-            RunnablePassthrough()  # Passes the input as-is
+            RunnablePassthrough()   # Passes the input as-is
             | self.prompt           # Formats the input for the LLM
             | self.model            # Queries the LLM
             | StrOutputParser()     # Parses the LLM's output
