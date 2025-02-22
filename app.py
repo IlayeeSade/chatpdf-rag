@@ -6,8 +6,7 @@ import streamlit as st
 from streamlit_chat import message
 from rag import ChatPDF
 
-st.set_page_config(page_title="RAG with Local DeepSeek R1")
-
+st.set_page_config(page_title="IlayeeRAG")
 
 def display_messages():
     """Display the chat history."""
@@ -21,7 +20,7 @@ def process_input():
     """Process the user input and generate an assistant response."""
     if st.session_state["user_input"] and len(st.session_state["user_input"].strip()) > 0:
         user_text = st.session_state["user_input"].strip()
-        with st.session_state["thinking_spinner"], st.spinner("Thinking..."):
+        with st.session_state["thinking_spinner"], st.spinner("חושב..."):
             try:
                 agent_text = st.session_state["assistant"].ask(
                     user_text,
@@ -46,7 +45,7 @@ def read_and_save_file():
             tf.write(file.getbuffer())
             file_path = tf.name
 
-        with st.session_state["ingestion_spinner"], st.spinner(f"Ingesting {file.name}..."):
+        with st.session_state["ingestion_spinner"], st.spinner(f"מעכל {file.name}..."):
             t0 = time.time()
             st.session_state["assistant"].ingest(file_path)
             t1 = time.time()
@@ -63,11 +62,11 @@ def page():
         st.session_state["messages"] = []
         st.session_state["assistant"] = ChatPDF()
 
-    st.header("RAG with Local DeepSeek R1")
+    st.header("IlayeeRAG")
 
-    st.subheader("Upload a Document")
+    st.subheader("העלה מסמך")
     st.file_uploader(
-        "Upload a PDF document",
+        "העלה מסמך",
         type=["pdf"],
         key="file_uploader",
         on_change=read_and_save_file,
