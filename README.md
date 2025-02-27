@@ -19,7 +19,7 @@ Follow the steps below to set up and run the application:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/paquino11/chatpdf-rag-deepseek-r1.git
+git clone https://github.com/IlayeeSade/chatpdf-rag
 cd chatpdf-rag-deepseek-r1
 ```
 
