@@ -7,6 +7,7 @@ A local Retrieval-Augmented Generation (RAG) application for interactive PDF doc
 ```bash
 # Setup environment
 sudo apt update && sudo apt install build-essential gh
+gh auth login
 gh repo clone IlayeeSade/chatpdf-rag
 cd chatpdf-rag
 
