@@ -12,7 +12,8 @@ def display_messages():
     """Display the chat history."""
     st.subheader("Chat History")
     for i, (msg, is_user) in enumerate(st.session_state["messages"]):
-        message(msg, is_user=is_user, key=str(i))
+        avatar = '👩‍🎤' if is_user else '👺'
+        message(msg, is_user=is_user, avatar=avatar, key=str(i))
     st.session_state["thinking_spinner"] = st.empty()
 
 
@@ -33,12 +34,14 @@ def process_input():
         st.session_state["messages"].append((user_text, True))
         st.session_state["messages"].append((agent_text, False))
 
-
 def read_and_save_file():
     """Handle file upload and ingestion."""
     st.session_state["assistant"].clear()
     st.session_state["messages"] = []
     st.session_state["user_input"] = ""
+    
+    # Create a new list for successfully ingested files
+    successful_files = []
 
     for file in st.session_state["file_uploader"]:
         with tempfile.NamedTemporaryFile(delete=False) as tf:
@@ -47,13 +50,21 @@ def read_and_save_file():
 
         with st.session_state["ingestion_spinner"], st.spinner(f"מעכל {file.name}..."):
             t0 = time.time()
-            st.session_state["assistant"].ingest(file_path)
+            ingest_result = st.session_state["assistant"].ingest(file_path)
             t1 = time.time()
 
-        st.session_state["messages"].append(
-            (f"Ingested {file.name} in {t1 - t0:.2f} seconds", False)
-        )
+        if ingest_result == "success":
+            st.session_state["messages"].append(
+                (f"Ingested {file.name} in {t1 - t0:.2f} seconds", False)
+            )
+            successful_files.append(file)
+        else:
+            st.error(f"Failed to ingest {file.name}: {ingest_result}")
+
         os.remove(file_path)
+
+    # Update the file_uploader state to only show successful files
+    st.session_state["file_uploader"] = successful_files
 
 
 def page():

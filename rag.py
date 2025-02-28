@@ -28,7 +28,7 @@ class ChatPDF:
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=1024, chunk_overlap=100)
         self.prompt = ChatPromptTemplate.from_template(
             """
-            You are a helpful assistant answering questions based on the uploaded documents you have in your context.
+            You are a helpful assistant answering questions using your knowledge empowered by the uploaded documents you have in your context.
             Context:
             {context}
             
@@ -49,7 +49,7 @@ class ChatPDF:
         
         if not os.path.exists(pdf_file_path):
             logger.warning(f"PDF file not found: {pdf_file_path}")
-            return "rejected"
+            return f"PDF file not found: {pdf_file_path}"
         
         # Try PyPDFLoader first
         try:
@@ -62,19 +62,7 @@ class ChatPDF:
                 raise ValueError("No text extracted")
                 
         except Exception as e:
-            logger.warning(f"PyPDFLoader failed: {str(e)}")
-            # Fall back to UnstructuredPDFLoader which can handle scanned PDFs better
-            try:
-                logger.info("Attempting to load PDF with UnstructuredPDFLoader")
-                docs = UnstructuredPDFLoader(file_path=pdf_file_path).load()
-            except Exception as e2:
-                logger.warning(f"UnstructuredPDFLoader also failed: {str(e2)}")
-                return "rejected"
-        
-        # Verify we have content
-        if not docs or all(not doc.page_content.strip() for doc in docs):
-            logger.warning("No text content found in PDF")
-            return "rejected"
+            return "No text detected"
             
         logger.info(f"Successfully extracted {len(docs)} pages from PDF")
         
@@ -85,7 +73,7 @@ class ChatPDF:
         # Add minimal content if needed
         if total_chars < 10:
             logger.warning("Very little text extracted")
-            return "rejected"
+            return "Very little text extracted"
             
         # Split documents
         try:
@@ -98,10 +86,10 @@ class ChatPDF:
                 chunks = backup_splitter.split_documents(docs)
                 if not chunks:
                     logger.warning("Text splitting resulted in empty chunks even with smaller chunk size")
-                    return "rejected"
+                    return "Text splitting resulted in empty chunks"
         except Exception as e:
             logger.warning(f"Error during text splitting: {str(e)}")
-            return "rejected"
+            return "Rejected"
             
         # Filter metadata and verify chunks have content
         try:
@@ -110,10 +98,10 @@ class ChatPDF:
             
             if not chunks:
                 logger.warning("No valid chunks with content after filtering")
-                return "rejected"
+                return "No valid chunks with content after filtering"
         except Exception as e:
             logger.warning(f"Error during chunk filtering: {str(e)}")
-            return "rejected"
+            return "Error during chunk filtering"
             
         # Log chunk info
         logger.info(f"Created {len(chunks)} chunks from document")
@@ -123,11 +111,11 @@ class ChatPDF:
             test_embedding = self.embeddings.embed_query(chunks[0].page_content)
             if not test_embedding:
                 logger.warning("Embedding model returned empty embeddings")
-                return "rejected"
+                return "Embedding model returned empty embeddings"
             logger.info(f"Test embedding successful, vector length: {len(test_embedding)}")
         except Exception as e:
             logger.warning(f"Error during test embedding: {str(e)}")
-            return "rejected"
+            return "Error"
             
         # Create vector store
         try:
@@ -140,7 +128,7 @@ class ChatPDF:
             return "success"
         except Exception as e:
             logger.warning(f"Error creating vector store: {str(e)}")
-            return "rejected"
+            return "Error creating vector store"
         
     def ask(self, query: str, k: int = 5, score_threshold: float = 0.2):
         """
