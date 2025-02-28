@@ -83,12 +83,6 @@ streamlit run app.py --server.port 8051 --server.address 0.0.0.0 &
 - **Vector store errors**: Delete `chroma_db/` directory and restart
 - **Launch issues**: Check dependencies and Python environment
 
-## Planned Enhancements
-
-- Conversational memory persistence
-- Document analytics visualizations
-- Additional model provider support
-
 ## License
 
 MIT License
