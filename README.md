@@ -63,15 +63,6 @@ streamlit run app.py --server.port 8051 --server.address 0.0.0.0 &
 - Streamlit, LangChain, Ollama
 - PyPDF, ChromaDB
 - Required packages in `requirements.txt`:
-  ```
-  streamlit
-  langchain
-  langchain_ollama
-  langchain_community
-  streamlit-chat
-  pypdf
-  chromadb
-  ```
 
 ## Usage Guide
 
