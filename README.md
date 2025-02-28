@@ -23,7 +23,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Launch application
-streamlit run app.py --server.port 8051 --server.address 0.0.0.0 &
+streamlit run app.py
 ```
 
 ## Core Features
@@ -84,6 +84,7 @@ streamlit run app.py --server.port 8051 --server.address 0.0.0.0 &
 - **Models missing**: Verify Ollama models are pulled correctly
 - **Vector store errors**: Delete `chroma_db/` directory and restart
 - **Launch issues**: Check dependencies and Python environment
+- **Port access**: Make sure if you host it that 8051 port is open
 
 ## License
 
