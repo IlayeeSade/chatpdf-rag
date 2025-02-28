@@ -1,171 +1,107 @@
-# Local ChatPDF with DeepSeek R1
+# ChatPDF RAG
 
-**ChatPDF** is a Retrieval-Augmented Generation (RAG) application that allows users to upload PDF documents and interact with them through a chatbot interface. The system uses advanced embedding models and a local vector store for efficient and accurate question-answering.
+A local Retrieval-Augmented Generation (RAG) application for interactive PDF document queries using embeddings and vector storage.
 
-## Features
+## Quick Start
 
-- **PDF Upload**: Upload one or multiple PDF documents to enable question-answering across their combined content.
-- **RAG Workflow**: Combines retrieval and generation for high-quality responses.
-- **Customizable Retrieval**: Adjust the number of retrieved results (`k`) and similarity threshold to fine-tune performance.
-- **Memory Management**: Easily clear vector store and retrievers to reset the system.
-- **Streamlit Interface**: A user-friendly web application for seamless interaction.
-
----
-
-## Installation
-
-Follow the steps below to set up and run the application:
-
-### 0. Prepare
 ```bash
-sudo apt update
-sudo apt install build-essential
-sudo apt install gh
+# Setup environment
+sudo apt update && sudo apt install build-essential gh
 gh repo clone IlayeeSade/chatpdf-rag
+cd chatpdf-rag
+
+# Install Ollama and required models
 curl -fsSL https://ollama.com/install.sh | sh
 ollama pull hf.co/mradermacher/dictalm2.0-instruct-GGUF:Q6_K
 ollama pull hf.co/KimChen/bge-m3-GGUF:Q6_K
-```
 
-### 1. Clone the Repository
-
-```bash
-cd chatpdf-rag
-```
-
-### 2. Create a Virtual Environment
-
-```bash
+# Setup Python environment
 python3 -m venv venv
 source venv/bin/activate
-```
-
-### 3. Install Dependencies
-
-Install the required Python packages:
-
-```bash
 pip install -r requirements.txt
-```
 
-Make sure to include the following packages in your `requirements.txt`:
-
-```
-streamlit
-langchain
-langchain_ollama
-langchain_community
-streamlit-chat
-pypdf
-chromadb
-```
-
-## Usage
-
-### 1. Start the Application
-
-Run the Streamlit app:
-
-```bash
+# Launch application
 streamlit run app.py --server.port 8051 --server.address 0.0.0.0 &
 ```
 
-### 2. Upload Documents
+## Core Features
 
-- Navigate to the **Upload a Document** section in the web interface.
-- Upload one or multiple PDF files to process their content.
-- Each file will be ingested automatically and confirmation messages will show processing time.
+- PDF document upload and processing
+- Conversational interface for document queries
+- Local vector database for efficient retrieval
+- Adjustable retrieval parameters for response quality
 
-### 3. Ask Questions
-
-- Type your question in the chat input box and press Enter.
-- Adjust retrieval settings (`k` and similarity threshold) in the **Settings** section for better responses.
-
-### 4. Clear Chat and Reset
-
-- Use the **Clear Chat** button to reset the chat interface.
-- Clearing the chat also resets the vector store and retriever.
-
----
-
-## Project Structure
+## Components
 
 ```
 .
-├── app.py                  # Streamlit app for the user interface
-├── rag.py                  # Core RAG logic for PDF ingestion and question-answering
-├── requirements.txt        # List of required Python dependencies
-├── chroma_db/              # Local persistent vector store (auto-generated)
-└── README.md               # Project documentation
+├── app.py              # Streamlit interface
+├── rag.py              # Core RAG implementation
+├── requirements.txt    # Dependencies
+├── chroma_db/          # Vector database (auto-generated)
+└── README.md           # Documentation
 ```
 
----
+## Configuration Options
 
-## Configuration
+### Models (Customizable)
+- LLM: `dictalm2.0-instruct-GGUF:Q6_K`
+- Embeddings: `bge-m3-GGUF:Q6_K`
+- Any Ollama-compatible model can be used via `llm_model` parameter
 
-You can modify the following parameters in `rag.py` to suit your needs:
+### Document Processing (Customizable)
+- Chunk size: 1024 tokens
+- Chunk overlap: 100 tokens
 
-1. **Models**:
-   - Default LLM: `deepseek-r1:latest` (7B parameters)
-   - Default Embedding: `mxbai-embed-large` (1024 dimensions)
-   - Change these in the `ChatPDF` class constructor or when initializing the class
-   - Any Ollama-compatible model can be used by updating the `llm_model` parameter
+### Retrieval Settings (User-adjustable)
+- `k`: Number of retrieved context chunks
+- `score_threshold`: Minimum similarity score for relevance
 
-2. **Chunking Parameters**:
-   - `chunk_size=1024` and `chunk_overlap=100`
-   - Adjust for larger or smaller document splits
+## Dependencies
 
-3. **Retrieval Settings**:
-   - Adjust `k` (number of retrieved results) and `score_threshold` in `ask()` to control the quality of retrieval.
+- Python 3.8+
+- Streamlit, LangChain, Ollama
+- PyPDF, ChromaDB
+- Required packages in `requirements.txt`:
+  ```
+  streamlit
+  langchain
+  langchain_ollama
+  langchain_community
+  streamlit-chat
+  pypdf
+  chromadb
+  ```
 
----
+## Usage Guide
 
-## Requirements
+1. **Document Upload**
+   - Navigate to the upload section
+   - Select PDF file(s)
 
-- **Python**: 3.8+
-- **Streamlit**: Web framework for the user interface.
-- **Ollama**: For embedding and LLM models.
-- **LangChain**: Core framework for RAG.
-- **PyPDF**: For PDF document processing.
-- **ChromaDB**: Vector store for document embeddings.
+2. **Query Documents**
+   - Type questions in the chat input
+   - Adjust retrieval parameters for better results
 
----
+3. **System Reset**
+   - Use "Clear Chat" to reset interface and storage
 
 ## Troubleshooting
 
-### Common Issues
+- **Models missing**: Verify Ollama models are pulled correctly
+- **Vector store errors**: Delete `chroma_db/` directory and restart
+- **Launch issues**: Check dependencies and Python environment
 
-1. **Missing Models**:
-   - Ensure you've pulled the required models using `ollama pull`.
+## Planned Enhancements
 
-2. **Vector Store Errors**:
-   - Delete the `chroma_db/` directory if you encounter dimensionality errors:
-     ```bash
-     rm -rf chroma_db/
-     ```
-
-3. **Streamlit Not Launching**:
-   - Verify dependencies are installed correctly using `pip install -r requirements.txt`.
-
----
-
-## Future Enhancements
-
-- **Memory Integration**: Add persistent memory to maintain conversational context across sessions.
-- **Advanced Analytics**: Include visual insights from retrieved content.
-- **Expanded Model Support**: Support additional embedding and LLM providers.
-
----
+- Conversational memory persistence
+- Document analytics visualizations
+- Additional model provider support
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
-
----
+MIT License
 
 ## Acknowledgments
 
-- [LangChain](https://github.com/hwchase17/langchain)
-- [Streamlit](https://github.com/streamlit/streamlit)
-- [Ollama](https://ollama.ai/)
-
+- LangChain, Streamlit, Ollama
