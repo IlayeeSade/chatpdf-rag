@@ -61,7 +61,7 @@ streamlit run app.py
 
 ## Dependencies
 
-- Python 3.8+
+- Python 3.11+
 - Streamlit, LangChain, Ollama
 - PyPDF, ChromaDB
 - Required packages in `requirements.txt`:
