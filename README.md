@@ -16,11 +16,21 @@
 
 Follow the steps below to set up and run the application:
 
+### 0. Prepare
+```bash
+sudo apt update
+sudo apt install build-essential
+sudo apt install gh
+gh repo clone IlayeeSade/chatpdf-rag
+curl -fsSL https://ollama.com/install.sh | sh
+ollama pull hf.co/mradermacher/dictalm2.0-instruct-GGUF:Q6_K
+ollama pull hf.co/KimChen/bge-m3-GGUF:Q6_K
+```
+
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/IlayeeSade/chatpdf-rag
-cd chatpdf-rag-deepseek-r1
+cd chatpdf-rag
 ```
 
 ### 2. Create a Virtual Environment
@@ -50,17 +60,6 @@ pypdf
 chromadb
 ```
 
-### 4. Pull Required Models for Ollama
-
-To use the specified embedding and LLM models (`mxbai-embed-large` and `deepseek-r1`), download them via the `ollama` CLI:
-
-```bash
-ollama pull mxbai-embed-large
-ollama pull deepseek-r1:latest
-```
-
----
-
 ## Usage
 
 ### 1. Start the Application
@@ -68,7 +67,7 @@ ollama pull deepseek-r1:latest
 Run the Streamlit app:
 
 ```bash
-streamlit run app.py
+streamlit run app.py --server.port 8051 --server.address 0.0.0.0 &
 ```
 
 ### 2. Upload Documents
