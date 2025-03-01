@@ -6,4 +6,4 @@ streamlit-chat
 pypdf
 chromadb
 datetime
-os
+reportlab

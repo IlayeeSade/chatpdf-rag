@@ -1,6 +1,7 @@
 from langchain_core.globals import set_verbose, set_debug
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 from langchain.schema.output_parser import StrOutputParser
+from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import PyPDFLoader, UnstructuredPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -11,6 +12,7 @@ import logging
 import chromadb
 import os
 from datetime import datetime
+from uuid import uuid4
 
 set_debug(True)
 set_verbose(True)
@@ -22,29 +24,36 @@ class ChatPDF:
     
     class ChatPDFError(Exception):
         """Base exception class for ChatPDF errors"""
-        pass
+        def __str__(self):
+            return "ChatPDF Error"
     
     class PDFNotFoundError(ChatPDFError):
         """Raised when the PDF file is not found"""
-        pass
+        def __str__(self):
+            return "PDF file not found"
     
     class TextExtractionError(ChatPDFError):
         """Raised when text cannot be extracted from the PDF"""
-        pass
+        def __str__(self):
+            return "Failed to extract text from PDF"
     
     class ChunkingError(ChatPDFError):
         """Raised when there are issues with text chunking"""
-        pass
+        def __str__(self):
+            return "Error chunking text"
     
     class EmbeddingError(ChatPDFError):
         """Raised when there are issues with embedding generation"""
-        pass
+        def __str__(self):
+            return "Error generating embeddings"
     
     class QueryError(ChatPDFError):
         """Raised when there are issues with query processing"""
-        pass
+        def __str__(self):
+            return "Error processing query"
     
-    def __init__(self, llm_model: str = "hf.co/mradermacher/dictalm2.0-instruct-GGUF:Q6_K",
+
+    def __init__(self, llm_model: str = "hf.co/lmstudio-community/DeepSeek-R1-Distill-Llama-8B-GGUF:Q6_K",
                  embedding_model: str = "hf.co/KimChen/bge-m3-GGUF:Q6_K",
                  chunk_size: int = 1024,
                  chunk_overlap: int = 100):
@@ -79,7 +88,9 @@ class ChatPDF:
             """
         )
         self.client = chromadb.PersistentClient(path="./my_chroma_db")
-        self.collection = self.client.get_or_create_collection(name="dove")
+        self.collection = self.client.get_or_create_collection(
+            name="dove",
+        )
         
     def __enter__(self):
         """Context manager entry"""
@@ -105,7 +116,9 @@ class ChatPDF:
             str: Status message
         """
         try:
-            self.collection.delete()
+            # Delete the existing collection
+            self.client.delete_collection(name="dove")
+            # Create a new collection
             self.collection = self.client.create_collection(name="dove")
             logger.info("Vector store cleared successfully")
             return "Vector store cleared successfully"
@@ -144,7 +157,7 @@ class ChatPDF:
         logger.info(f"Starting ingestion for file: {pdf_file_path}")
         
         if not os.path.exists(pdf_file_path):
-            raise PDFNotFoundError(f"PDF file not found at path: {pdf_file_path}")
+            raise self.PDFNotFoundError(f"PDF file not found at path: {pdf_file_path}")
         
         # Try PyPDFLoader first
         try:
@@ -153,10 +166,10 @@ class ChatPDF:
             
             # Check if we got any content
             if not docs or all(not doc.page_content.strip() for doc in docs):
-                raise TextExtractionError("No text content could be extracted from the PDF")
+                raise self.TextExtractionError("No text content could be extracted from the PDF")
                 
         except Exception as e:
-            raise TextExtractionError(f"Failed to extract text from PDF: {str(e)}")
+            raise self.TextExtractionError(f"Failed to extract text from PDF: {str(e)}")
             
         logger.info(f"Successfully extracted {len(docs)} pages from PDF")
         
@@ -166,7 +179,7 @@ class ChatPDF:
         
         # Add minimal content if needed
         if total_chars < 10:
-            raise TextExtractionError("Very little text extracted from the PDF")
+            raise self.TextExtractionError("Very little text extracted from the PDF")
             
         # Split documents with adaptive chunk size
         try:
@@ -196,11 +209,11 @@ class ChatPDF:
                 chunks = self.text_splitter.split_documents(docs)
                 
                 if not chunks:
-                    raise ChunkingError("Text splitting resulted in empty chunks even with smaller chunk size")
-        except ChunkingError:
+                    raise self.ChunkingError("Text splitting resulted in empty chunks even with smaller chunk size")
+        except self.ChunkingError:
             raise
         except Exception as e:
-            raise ChunkingError(f"Error during text splitting: {str(e)}")
+            raise self.ChunkingError(f"Error during text splitting: {str(e)}")
             
         # Filter metadata and verify chunks have content
         try:
@@ -208,11 +221,11 @@ class ChatPDF:
             chunks = [chunk for chunk in chunks if chunk.page_content.strip()]
             
             if not chunks:
-                raise ChunkingError("No valid chunks with content after filtering")
-        except ChunkingError:
+                raise self.ChunkingError("No valid chunks with content after filtering")
+        except self.ChunkingError:
             raise
         except Exception as e:
-            raise ChunkingError(f"Error during chunk filtering: {str(e)}")
+            raise self.ChunkingError(f"Error during chunk filtering: {str(e)}")
             
         # Log chunk info
         logger.info(f"Created {len(chunks)} chunks from document")
@@ -221,25 +234,27 @@ class ChatPDF:
         try:
             test_embedding = self.embeddings.embed_query(chunks[0].page_content)
             if not test_embedding:
-                raise EmbeddingError("Embedding model returned empty embeddings")
+                raise self.EmbeddingError("Embedding model returned empty embeddings")
             logger.info(f"Test embedding successful, vector length: {len(test_embedding)}")
-        except EmbeddingError:
+        except self.EmbeddingError:
             raise
         except Exception as e:
-            raise EmbeddingError(f"Error during test embedding: {str(e)}")
+            raise self.EmbeddingError(f"Error during test embedding: {str(e)}")
             
         # Create vector store
-        try:
+        try:           
+            docs = [doc.page_content for doc in chunks]
             self.collection.add(
-                documents=chunks,
-                metadatas=[{"timestamp": datetime.now().timestamp()} for doc in chunks],
-                embeddings=self.embeddings.embed_documents([doc.page_content for doc in chunks]),
-                persist_directory="my_chroma_db",
+                documents=docs,
+                embeddings = self.embeddings.embed_documents(docs),
+                ids=[str(uuid4()) for _ in docs],
+                metadatas=[{"timestamp": datetime.now().timestamp()} for _ in docs],
             )
             logger.info("Ingestion completed. Document embeddings stored successfully.")
             return "Document successfully ingested"
         except Exception as e:
-            raise ChatPDFError(f"Error creating vector store: {str(e)}")
+            logger.info(str(e))
+            raise self.ChatPDFError(f"Error creating vector store: {str(e)}")
         
     def ask(self, query: str, k: int = 5, score_threshold: float = 0.2) -> str:
         """
@@ -260,12 +275,11 @@ class ChatPDF:
         logger.info(f"Retrieving context for query: {query}")
         try:
             results = self.collection.query(
-                query_texts=[query],
+                query_embeddings=[self.embeddings.embed_query(query)],
                 n_results=k,
-                where={"distance": {"$gt": score_threshold}},
                 include=["documents", "metadatas", "distances"]
             )
-            
+
             chain = (
                 RunnablePassthrough()
                 | self.prompt
@@ -276,7 +290,7 @@ class ChatPDF:
             logger.info("Generating response using the LLM.")
 
             if not results or not results['documents'][0]:
-                return chain.invoke(formatted_input)
+                return chain.invoke(formatted_input), None
                 
             # Format context with document metadata
             context_parts = []
@@ -294,7 +308,7 @@ class ChatPDF:
             }
 
             logger.info("Generating response using the LLM.")
-            return chain.invoke(formatted_input)
+            return chain.invoke(formatted_input), context_parts
         except Exception as e:
             logger.error(f"Error during query processing: {str(e)}")
-            raise QueryError(f"Error processing query: {str(e)}")
+            raise self.QueryError(f"Error processing query: {str(e)}")
