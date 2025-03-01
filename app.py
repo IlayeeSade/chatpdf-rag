@@ -6,25 +6,29 @@ st.set_page_config(page_title="IlayeeRAG")
 import os
 import tempfile
 import time
+import base64
 from streamlit_chat import message
 from rag import ChatPDF
 from reference import create_download_link
+import streamlit.components.v1 as components
 
+# Initialize session state variables
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
+if "assistant" not in st.session_state:
+    st.session_state["assistant"] = ChatPDF()
+if "file_processed" not in st.session_state:
+    st.session_state["file_processed"] = False
 
-def display_messages():
-    """Display the chat history."""
-    st.subheader("Chat History")
-    for msg, is_user in st.session_state["messages"]:
-        with st.chat_message("user" if is_user else "assistant"):
-            st.markdown(msg, unsafe_allow_html=True)
-    st.session_state["thinking_spinner"] = st.empty()
-
+st.header("IlayeeRAG")
 
 def process_input():
-    """Process the user input and generate an assistant response."""
     if st.session_state["user_input"] and len(st.session_state["user_input"].strip()) > 0:
         user_text = st.session_state["user_input"].strip()
-        with st.session_state["thinking_spinner"], st.spinner("חושב..."):
+        st.session_state["messages"].append((user_text, True))
+        st.session_state["user_input"] = ""
+        
+        with st.spinner("חושב..."):
             try:
                 agent_text, context_parts = st.session_state["assistant"].ask(
                     user_text,
@@ -32,111 +36,83 @@ def process_input():
                     score_threshold=st.session_state["retrieval_threshold"],
                 )
                 
-                # If context_parts exists and contains items, create PDF links
                 if context_parts and len(context_parts) > 0:
-                    # Store the original agent text
-                    original_agent_text = agent_text
-                    
-                    # Add PDF links section
                     agent_text += "\n\n**Source Documents:**\n"
-                    
-                    # Add links for each context part
                     for i, context in enumerate(context_parts):
-                        # Create short preview (first 50 chars)
                         preview = context[:50] + "..." if len(context) > 50 else context
-                        
-                        # Create PDF link
                         link = create_download_link(context, f"source_document_{i+1}")
-                        
-                        # Add to agent text
                         agent_text += f"{i+1}. {preview} {link}\n"
                 
-            except ChatPDF.QueryError as e:
-                agent_text = f"Sorry, I encountered an error processing your query: {str(e)}"
             except Exception as e:
-                agent_text = f"An unexpected error occurred: {str(e)}"
+                agent_text = f"Error: {str(e)}"
 
-        st.session_state["messages"].append((user_text, True))
         st.session_state["messages"].append((agent_text, False))
 
-def handle_file_upload():
-    """Handle file upload and ingestion."""
-    if "assistant" not in st.session_state:
-        st.session_state["assistant"] = ChatPDF()
-        st.session_state["messages"] = []
+# File upload section
+st.subheader("העלה מסמך")
+
+uploaded_files = st.file_uploader(
+    "העלה מסמך",
+    type=["pdf"],
+    accept_multiple_files=True,
+    key="file_uploader"
+)
+
+music_path = 'bg_music.mp3'
+if os.path.exists(music_path):
+    st.audio(open(music_path, "rb").read(), format=f"audio/{music_path.split('.')[-1]}")
+else:
+    st.error(f"Music file not found at: {music_path}")
+
+# Process uploaded files only when files are uploaded
+if uploaded_files and not st.session_state["file_processed"]:
+    st.session_state["assistant"].clear()  # Clear previous documents
+    st.session_state["messages"] = []
     
-    uploaded_files = st.file_uploader(
-        "העלה מסמך",
-        type=["pdf"],
-        accept_multiple_files=True,
-    )
+    for file in uploaded_files:
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            tf.write(file.getbuffer())
+            file_path = tf.name
 
-    if uploaded_files:
-        st.session_state["assistant"].clear()  # Clear previous documents
-        st.session_state["messages"] = []
-        st.session_state["user_input"] = ""
-        
-        for file in uploaded_files:
-            with tempfile.NamedTemporaryFile(delete=False) as tf:
-                tf.write(file.getbuffer())
-                file_path = tf.name
+        with st.spinner(f"מעכל {file.name}..."):
+            t0 = time.time()
+            try:
+                st.session_state["assistant"].ingest(file_path)
+                t1 = time.time()
+                st.session_state["messages"].append(
+                    (f"Successfully ingested {file.name} in {t1 - t0:.2f} seconds", False)
+                )
+            except Exception as e:
+                error_msg = f"Error processing {file.name}: {str(e)}"
+                st.error(error_msg)
+                st.session_state["messages"].append((error_msg, False))
+            finally:
+                os.remove(file_path)
+    
+    st.session_state["file_processed"] = True
 
-            with st.spinner(f"מעכל {file.name}..."):
-                t0 = time.time()
-                try:
-                    st.session_state["assistant"].ingest(file_path)
-                    t1 = time.time()
-                    st.session_state["messages"].append(
-                        (f"Successfully ingested {file.name} in {t1 - t0:.2f} seconds", False)
-                    )
-                except Exception as e:
-                    if isinstance(e, ChatPDF.PDFNotFoundError):
-                        st.error(f"Could not find the file: {file.name}")
-                    elif isinstance(e, ChatPDF.TextExtractionError):
-                        st.error(f"Could not extract text from {file.name}: {str(e)}")
-                    elif isinstance(e, ChatPDF.ChunkingError):
-                        st.error(f"Error processing document chunks in {file.name}: {str(e)}")
-                    elif isinstance(e, ChatPDF.EmbeddingError):
-                        st.error(f"Error generating embeddings for {file.name}: {str(e)}")
-                    elif isinstance(e, ChatPDF.ChatPDFError):
-                        st.error(f"Error processing {file.name}: {str(e)}")
-                    else:
-                        st.error(f"Unexpected error processing {file.name}: {str(e)}")
-                finally:
-                    os.remove(file_path)
+# Reset file processed flag when no files are selected
+if not uploaded_files:
+    st.session_state["file_processed"] = False
 
-def page():
-    """Main app page layout."""
-    if "messages" not in st.session_state:
-        st.session_state["messages"] = []
-        st.session_state["assistant"] = ChatPDF()
+# Retrieval settings
+st.subheader("Settings")
+st.session_state["retrieval_k"] = st.slider(
+    "Number of Retrieved Results (k)", min_value=1, max_value=10, value=5
+)
+st.session_state["retrieval_threshold"] = st.slider(
+    "Similarity Score Threshold", min_value=0.0, max_value=1.0, value=0.2, step=0.05
+)
 
-    st.header("IlayeeRAG")
+# Display messages
+st.subheader("Chat History")
+for i, (msg, is_user) in enumerate(st.session_state["messages"]):
+    st.chat_message("user" if is_user else "assistant").markdown(msg, unsafe_allow_html=True)
 
-    st.subheader("העלה מסמך")
-    handle_file_upload()
+st.text_input("Message", key="user_input", on_change=process_input)
 
-    st.session_state["ingestion_spinner"] = st.empty()
-
-    # Retrieval settings
-    st.subheader("Settings")
-    st.session_state["retrieval_k"] = st.slider(
-        "Number of Retrieved Results (k)", min_value=1, max_value=10, value=5
-    )
-    st.session_state["retrieval_threshold"] = st.slider(
-        "Similarity Score Threshold", min_value=0.0, max_value=1.0, value=0.2, step=0.05
-    )
-
-    # Display messages and text input
-    display_messages()
-    st.text_input("Message", key="user_input", on_change=process_input)
-
-    # Clear chat
-    if st.button("Clear Chat"):
-        st.session_state["messages"] = []
-        if "assistant" in st.session_state:
-            st.session_state["assistant"].cleanup()
-
-
-if __name__ == "__main__":
-    page()
+# Clear chat
+if st.button("Clear Chat"):
+    st.session_state["messages"] = []
+    if "assistant" in st.session_state:
+        st.session_state["assistant"].cleanup()

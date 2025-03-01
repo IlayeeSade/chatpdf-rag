@@ -233,7 +233,7 @@ class ChatPDF:
         # Log chunk info
         logger.info(f"Created {len(chunks)} chunks from document")
         try:           
-            docs = [self.translator.translate(doc.page_content, "en", "he") for doc in chunks]
+            docs = [self.translator.translate(doc.page_content, "en", "he").result for doc in chunks]
             self.collection.add(
                 documents=docs,
                 embeddings = self.embeddings.embed_documents(docs),
@@ -258,7 +258,7 @@ class ChatPDF:
         Raises:
             QueryError: If there are issues processing the query
         """
-        query = self.translator.translate(query, "en", "he")
+        query = self.translator.translate(query, "en", "he").result
         formatted_input = {
             "context": "There is no context as of now, use your knowledge and mention the fact you have no context and use your knowledge only",
             "question": query,
@@ -281,7 +281,7 @@ class ChatPDF:
             logger.info("Generating response using the LLM.")
 
             if not results or not results['documents'][0]:
-                return self.translator.translate(chain.invoke(formatted_input), "he", "en"), None
+                return chain.invoke(formatted_input).split('</think>')[1], None
                 
             # Format context with document metadata
             context_parts = []
@@ -299,14 +299,7 @@ class ChatPDF:
             }
 
             logger.info("Generating response using the LLM.")
-            return self.translator.translate(chain.invoke(formatted_input), "he", "en"), context_parts
+            return chain.invoke(formatted_input).split('</think>')[1], context_parts
         except Exception as e:
             logger.error(f"Error during query processing: {str(e)}")
             raise self.QueryError(f"Error processing query: {str(e)}")
-        
-
-def extract_final_answer_deepsee(raw_output):
-    # Look for content after </think> tag
-    if "</think>" in raw_output:
-        return raw_output.split("</think>", 1)[1].strip()
-    return raw_output
