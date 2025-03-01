@@ -5,6 +5,9 @@ A local Retrieval-Augmented Generation (RAG) application for interactive PDF doc
 ## Quick Start
 
 ```bash
+# Setup environment
+sudo apt update && sudo apt install build-essential gh
+
 # For python less than 3.11
 sudo apt install python3.12
 sudo apt install python3.12-venv
@@ -13,13 +16,13 @@ sudo apt install python3.12-venv
 python3.12 -m venv venv
 cd venv
 source bin/activate
-pip install -r requirements.txt
 
-# Setup environment
-sudo apt update && sudo apt install build-essential gh
+# Git
 gh auth login
 gh repo clone IlayeeSade/chatpdf-rag
 cd chatpdf-rag
+
+pip install -r requirements.txt
 
 # Install Ollama and required models
 curl -fsSL https://ollama.com/install.sh | sh
