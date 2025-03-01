@@ -19,7 +19,7 @@ cd chatpdf-rag
 # Install Ollama and required models
 curl -fsSL https://ollama.com/install.sh | sh
 ollama serve &
-ollama pull hf.co/mradermacher/dictalm2.0-instruct-GGUF:Q6_K
+ollama pull hf.co/lmstudio-community/DeepSeek-R1-Distill-Llama-8B-GGUF:Q6_K
 ollama pull hf.co/KimChen/bge-m3-GGUF:Q6_K
 
 # Setup Python environment
