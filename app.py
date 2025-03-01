@@ -28,15 +28,17 @@ def process_input():
                     k=st.session_state["retrieval_k"],
                     score_threshold=st.session_state["retrieval_threshold"],
                 )
-            except ValueError as e:
-                agent_text = str(e)
+            except ChatPDF.QueryError as e:
+                agent_text = f"Sorry, I encountered an error processing your query: {str(e)}"
+            except Exception as e:
+                agent_text = f"An unexpected error occurred: {str(e)}"
 
         st.session_state["messages"].append((user_text, True))
         st.session_state["messages"].append((agent_text, False))
 
 def read_and_save_file():
     """Handle file upload and ingestion."""
-    st.session_state["assistant"].clear()
+    st.session_state["assistant"]
     st.session_state["messages"] = []
     st.session_state["user_input"] = ""
     
@@ -50,18 +52,27 @@ def read_and_save_file():
 
         with st.session_state["ingestion_spinner"], st.spinner(f"מעכל {file.name}..."):
             t0 = time.time()
-            ingest_result = st.session_state["assistant"].ingest(file_path)
-            t1 = time.time()
-
-        if ingest_result == "success":
-            st.session_state["messages"].append(
-                (f"Ingested {file.name} in {t1 - t0:.2f} seconds", False)
-            )
-            successful_files.append(file)
-        else:
-            st.error(f"Failed to ingest {file.name}: {ingest_result}")
-
-        os.remove(file_path)
+            try:
+                st.session_state["assistant"].ingest(file_path)
+                t1 = time.time()
+                st.session_state["messages"].append(
+                    (f"Successfully ingested {file.name} in {t1 - t0:.2f} seconds", False)
+                )
+                successful_files.append(file)
+            except ChatPDF.PDFNotFoundError:
+                st.error(f"Could not find the file: {file.name}")
+            except ChatPDF.TextExtractionError as e:
+                st.error(f"Could not extract text from {file.name}: {str(e)}")
+            except ChatPDF.ChunkingError as e:
+                st.error(f"Error processing document chunks in {file.name}: {str(e)}")
+            except ChatPDF.EmbeddingError as e:
+                st.error(f"Error generating embeddings for {file.name}: {str(e)}")
+            except ChatPDF.ChatPDFError as e:
+                st.error(f"Error processing {file.name}: {str(e)}")
+            except Exception as e:
+                st.error(f"Unexpected error processing {file.name}: {str(e)}")
+            finally:
+                os.remove(file_path)
 
     # Update the file_uploader state to only show successful files
     st.session_state["file_uploader"] = successful_files
@@ -103,7 +114,7 @@ def page():
     # Clear chat
     if st.button("Clear Chat"):
         st.session_state["messages"] = []
-        st.session_state["assistant"].clear()
+        st.session_state["assistant"].cleanup()
 
 
 if __name__ == "__main__":

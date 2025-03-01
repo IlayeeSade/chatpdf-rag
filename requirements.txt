@@ -5,3 +5,5 @@ langchain_community
 streamlit-chat
 pypdf
 chromadb
+datetime
+os
