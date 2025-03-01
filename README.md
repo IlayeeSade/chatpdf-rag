@@ -6,9 +6,14 @@ A local Retrieval-Augmented Generation (RAG) application for interactive PDF doc
 
 ```bash
 # For python less than 3.11
-sudo apt install -y software-properties-common build-essential zlib1g-dev libssl-dev libffi-dev libncurses5-dev libsqlite3-dev libreadline-dev libbz2-dev
 sudo apt install python3.12
-python3.12 -m ensurepip --upgrade
+sudo apt install python3.12-venv
+
+# Setup Python environment
+python3.12 -m venv venv
+cd venv
+source bin/activate
+pip install -r requirements.txt
 
 # Setup environment
 sudo apt update && sudo apt install build-essential gh
@@ -21,11 +26,6 @@ curl -fsSL https://ollama.com/install.sh | sh
 ollama serve &
 ollama pull hf.co/lmstudio-community/DeepSeek-R1-Distill-Llama-8B-GGUF:Q6_K
 ollama pull hf.co/KimChen/bge-m3-GGUF:Q6_K
-
-# Setup Python environment
-python3.12 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
 
 # Launch application
 streamlit run app.py
