@@ -5,6 +5,11 @@ A local Retrieval-Augmented Generation (RAG) application for interactive PDF doc
 ## Quick Start
 
 ```bash
+# For python less than 3.11
+sudo apt install -y software-properties-common build-essential zlib1g-dev libssl-dev libffi-dev libncurses5-dev libsqlite3-dev libreadline-dev libbz2-dev
+sudo apt install python3.12
+python3.12 -m ensurepip --upgrade
+
 # Setup environment
 sudo apt update && sudo apt install build-essential gh
 gh auth login
@@ -18,7 +23,7 @@ ollama pull hf.co/mradermacher/dictalm2.0-instruct-GGUF:Q6_K
 ollama pull hf.co/KimChen/bge-m3-GGUF:Q6_K
 
 # Setup Python environment
-python3 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
