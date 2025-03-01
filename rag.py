@@ -13,6 +13,7 @@ import chromadb
 import os
 from datetime import datetime
 from uuid import uuid4
+from translatepy import Translator
 
 set_debug(True)
 set_verbose(True)
@@ -77,6 +78,7 @@ class ChatPDF:
         )
         self.prompt = ChatPromptTemplate.from_template(
             """
+            תענה בעברית, את החשיבה אתה יכול לעשות בשפה שתרצה
             You are a helpful assistant answering questions using your knowledge empowered by the uploaded documents you have in your context.
             Context:
             {context}
@@ -91,6 +93,7 @@ class ChatPDF:
         self.collection = self.client.get_or_create_collection(
             name="dove",
         )
+        self.translator = Translator()
         
     def __enter__(self):
         """Context manager entry"""
@@ -229,21 +232,8 @@ class ChatPDF:
             
         # Log chunk info
         logger.info(f"Created {len(chunks)} chunks from document")
-        
-        # Test embedding generation with a single chunk
-        try:
-            test_embedding = self.embeddings.embed_query(chunks[0].page_content)
-            if not test_embedding:
-                raise self.EmbeddingError("Embedding model returned empty embeddings")
-            logger.info(f"Test embedding successful, vector length: {len(test_embedding)}")
-        except self.EmbeddingError:
-            raise
-        except Exception as e:
-            raise self.EmbeddingError(f"Error during test embedding: {str(e)}")
-            
-        # Create vector store
         try:           
-            docs = [doc.page_content for doc in chunks]
+            docs = [self.translator.translate(doc.page_content, "en", "he") for doc in chunks]
             self.collection.add(
                 documents=docs,
                 embeddings = self.embeddings.embed_documents(docs),
@@ -268,6 +258,7 @@ class ChatPDF:
         Raises:
             QueryError: If there are issues processing the query
         """
+        query = self.translator.translate(query, "en", "he")
         formatted_input = {
             "context": "There is no context as of now, use your knowledge and mention the fact you have no context and use your knowledge only",
             "question": query,
@@ -290,7 +281,7 @@ class ChatPDF:
             logger.info("Generating response using the LLM.")
 
             if not results or not results['documents'][0]:
-                return chain.invoke(formatted_input), None
+                return self.translator.translate(chain.invoke(formatted_input), "he", "en"), None
                 
             # Format context with document metadata
             context_parts = []
@@ -308,7 +299,14 @@ class ChatPDF:
             }
 
             logger.info("Generating response using the LLM.")
-            return chain.invoke(formatted_input), context_parts
+            return self.translator.translate(chain.invoke(formatted_input), "he", "en"), context_parts
         except Exception as e:
             logger.error(f"Error during query processing: {str(e)}")
             raise self.QueryError(f"Error processing query: {str(e)}")
+        
+
+def extract_final_answer_deepsee(raw_output):
+    # Look for content after </think> tag
+    if "</think>" in raw_output:
+        return raw_output.split("</think>", 1)[1].strip()
+    return raw_output
