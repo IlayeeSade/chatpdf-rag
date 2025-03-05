@@ -57,7 +57,7 @@ class ChatPDF:
     
 
     def __init__(self, llm_model: str = "hf.co/lmstudio-community/DeepSeek-R1-Distill-Llama-8B-GGUF:Q6_K",
-                 embedding_model: str = "hf.co/KimChen/bge-m3-GGUF:Q6_K",
+                 embedding_model: str = "hf.co/KimChen/bge-m3-GGUF:Q8_0",
                  chunk_size: int = 1024,
                  chunk_overlap: int = 100):
         """
@@ -262,7 +262,8 @@ class ChatPDF:
         # Log chunk info
         logger.info(f"Created {len(chunks)} chunks from document")
         try:           
-            docs = [self.translator.translate(doc.page_content, "en", "he").result for doc in chunks]
+            # docs = [self.translator.translate(doc.page_content, "en", "he").result for doc in chunks]
+            docs = [doc.page_content for doc in chunks]
             self.collection.add(
                 documents=docs,
                 embeddings = self.embeddings.embed_documents(docs),
@@ -287,7 +288,7 @@ class ChatPDF:
         Raises:
             QueryError: If there are issues processing the query
         """
-        query = self.translator.translate(query, "en", "he").result
+        # query = self.translator.translate(query, "en", "he").result
         formatted_input = {
             "context": "There is no context as of now, use your knowledge and mention the fact you have no context and use your knowledge only",
             "question": query,

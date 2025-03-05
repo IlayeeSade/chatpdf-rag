@@ -26,7 +26,7 @@ pip install -r requirements.txt
 
 # Install Ollama and required models
 curl -fsSL https://ollama.com/install.sh | sh
-ollama serve &
+ollama serve & / start /B ollama serve , tasklist | findstr ollama , taskkill /PID <PID> /F
 ollama pull hf.co/lmstudio-community/DeepSeek-R1-Distill-Llama-8B-GGUF:Q6_K
 ollama pull hf.co/KimChen/bge-m3-GGUF:Q6_K
 
