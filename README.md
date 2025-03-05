@@ -13,9 +13,9 @@ sudo apt install python3.12
 sudo apt install python3.12-venv
 
 # Setup Python environment
-python3.12 -m venv venv
+python3.12 -m venv venv / python -m venv venv
 cd venv
-source bin/activate
+source bin/activate / Scripts/activate
 
 # Git
 gh auth login
