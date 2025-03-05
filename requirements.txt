@@ -8,3 +8,6 @@ chromadb
 datetime
 reportlab
 translatepy
+pdf2image
+pytesseract
+pillow

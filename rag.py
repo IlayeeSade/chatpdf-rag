@@ -13,6 +13,8 @@ import chromadb
 import os
 from datetime import datetime
 from uuid import uuid4
+from pdf2image import convert_from_path
+import pytesseract
 from translatepy import Translator
 
 set_debug(True)
@@ -130,6 +132,32 @@ class ChatPDF:
             logger.error(error_msg)
             return error_msg
         
+    def _load_pdf_with_ocr(self, pdf_file_path):
+        try:
+            logger.info("Converting PDF to images for OCR")
+            # Convert PDF pages to images
+            images = convert_from_path(pdf_file_path)
+            
+            extracted_text = []
+            for i, image in enumerate(images):
+                logger.info(f"Processing page {i + 1} with OCR")
+                # Use Tesseract OCR with multilingual support
+                text = pytesseract.image_to_string(image, lang='eng+fra+spa')  # Add languages as needed
+                if not text.strip():
+                    logger.warning(f"No text extracted from page {i + 1}")
+                extracted_text.append(text)
+            
+            if not any(extracted_text):
+                raise self.TextExtractionError("No text content could be extracted from the PDF with OCR")
+            
+            # Mimic the structure of PyPDFLoader output (Document objects)
+            from langchain.docstore.document import Document
+            return [Document(page_content=text, metadata={"page": i+1}) for i, text in enumerate(extracted_text)]
+
+        except Exception as e:
+            logger.error(f"OCR processing failed: {e}")
+            raise self.TextExtractionError(f"Failed to extract text with OCR: {e}")
+        
     def _get_adaptive_chunk_size(self, total_chars: int) -> tuple[int, int]:
         """
         Calculate adaptive chunk size based on document length.
@@ -146,7 +174,7 @@ class ChatPDF:
             return self.chunk_size, self.chunk_overlap  # Large documents
             
     def ingest(self, pdf_file_path: str) -> str:
-        """
+        """a
         Ingest a PDF file, split its contents, and store the embeddings in the vector store.
         Returns:
             str: Success message if ingestion is successful
@@ -172,7 +200,8 @@ class ChatPDF:
                 raise self.TextExtractionError("No text content could be extracted from the PDF")
                 
         except Exception as e:
-            raise self.TextExtractionError(f"Failed to extract text from PDF: {str(e)}")
+            logger.error(f"Error with PyPDFLoader: {e}, falling back to OCR")
+            return self._load_pdf_with_ocr(pdf_file_path)
             
         logger.info(f"Successfully extracted {len(docs)} pages from PDF")
         
